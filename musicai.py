@@ -26,68 +26,83 @@ def save_users(users):
 users = load_users()
 current_user = None
 
-def login():
+def authenticate():
     global current_user
-    username = st.text_input("Username", placeholder="Enter your username")
-    password = st.text_input("Password", type="password", placeholder="Enter your password")
-    if st.button("Login", use_container_width=True):
-        if username in users and users[username]["password"] == password:
-            st.success(f"Welcome back, {username}!")
-            current_user = username
+    if "auth_mode" not in st.session_state:
+        st.session_state.auth_mode = "Login"
+
+    if "logged_in" not in st.session_state:
+        st.session_state.logged_in = False
+
+    if not st.session_state.logged_in:
+        st.sidebar.title("🎵 AI Music System")
+        auth_mode = st.sidebar.radio("Select", ["Login", "Sign Up"], index=(0 if st.session_state.auth_mode == "Login" else 1))
+        st.session_state.auth_mode = auth_mode
+
+        if auth_mode == "Login":
+            username = st.sidebar.text_input("Username", placeholder="Enter your username")
+            password = st.sidebar.text_input("Password", type="password", placeholder="Enter your password")
+            if st.sidebar.button("Login", use_container_width=True):
+                if username in users and users[username]["password"] == password:
+                    st.sidebar.success(f"Welcome back, {username}!")
+                    st.session_state.logged_in = True
+                    st.session_state.current_user = username
+                else:
+                    st.sidebar.error("Invalid credentials")
         else:
-            st.error("Invalid credentials")
+            username = st.sidebar.text_input("New Username", placeholder="Choose a username")
+            password = st.sidebar.text_input("New Password", type="password", placeholder="Create a password")
+            if st.sidebar.button("Sign Up", use_container_width=True):
+                if username in users:
+                    st.sidebar.error("Username already exists")
+                else:
+                    users[username] = {"password": password, "liked_songs": []}
+                    save_users(users)
+                    st.sidebar.success("Account created! Please log in.")
+    
+authenticate()
 
-def signup():
-    username = st.text_input("New Username", placeholder="Choose a username")
-    password = st.text_input("New Password", type="password", placeholder="Create a password")
-    if st.button("Sign Up", use_container_width=True):
-        if username in users:
-            st.error("Username already exists")
-        else:
-            users[username] = {"password": password, "liked_songs": []}
-            save_users(users)
-            st.success("Account created! Please log in.")
+# UI for welcome screen
+if not st.session_state.get("logged_in", False):
+    st.markdown("""
+        # 🎶 Welcome to AI Music Recommendation System
+        Explore a world of music tailored to your taste. 
+        Login or Sign up to start your journey!
+    """)
+else:
+    st.title("🎶 AI Music Recommendation System")
+    st.markdown(f"## Welcome, {st.session_state.current_user}")
 
-st.sidebar.title("🎵 User Authentication")
-login()
-if not current_user:
-    st.sidebar.subheader("Don't have an account?")
-    signup()
-
-# Function to categorize songs
-def categorize_songs(uploaded_files, sorted_path):
-    for uploaded_file in uploaded_files:
-        song_name = uploaded_file.name
-        if song_name.endswith((".mp3", ".wav", ".flac", ".mp4")):
-            song_path = os.path.join(sorted_path, song_name)
-            with open(song_path, "wb") as f:
-                f.write(uploaded_file.getbuffer())
-            
-            parts = os.path.splitext(song_name)[0].split("_")
-            if len(parts) >= 4:
-                artist, title, genre, language = parts[:4]
+    # Function to categorize songs
+    def categorize_songs(uploaded_files, sorted_path):
+        for uploaded_file in uploaded_files:
+            song_name = uploaded_file.name
+            if song_name.endswith((".mp3", ".wav", ".flac", ".mp4")):
+                song_path = os.path.join(sorted_path, song_name)
+                with open(song_path, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
                 
-                album_path = os.path.join(sorted_path, f"{artist} - {genre} Album")
-                os.makedirs(album_path, exist_ok=True)
-                shutil.move(song_path, os.path.join(album_path, song_name))
+                parts = os.path.splitext(song_name)[0].split("_")
+                if len(parts) >= 4:
+                    artist, title, genre, language = parts[:4]
+                    
+                    album_path = os.path.join(sorted_path, f"{artist} - {genre} Album")
+                    os.makedirs(album_path, exist_ok=True)
+                    shutil.move(song_path, os.path.join(album_path, song_name))
 
-# Function to scan albums
-def scan_albums(sorted_path):
-    albums = []
-    for album in os.listdir(sorted_path):
-        album_path = os.path.join(sorted_path, album)
-        if os.path.isdir(album_path):
-            albums.append({
-                "Album": album,
-                "Songs": os.listdir(album_path),
-                "Count": len(os.listdir(album_path))
-            })
-    return albums
+    # Function to scan albums
+    def scan_albums(sorted_path):
+        albums = []
+        for album in os.listdir(sorted_path):
+            album_path = os.path.join(sorted_path, album)
+            if os.path.isdir(album_path):
+                albums.append({
+                    "Album": album,
+                    "Songs": os.listdir(album_path),
+                    "Count": len(os.listdir(album_path))
+                })
+        return albums
 
-# Streamlit UI
-st.title("🎶 AI Music Recommendation System")
-
-if current_user:
     st.markdown("### Upload and Categorize Songs")
     uploaded_files = st.file_uploader("Upload Songs (MP3, WAV, FLAC, MP4)", accept_multiple_files=True, type=["mp3", "wav", "flac", "mp4"], help="Upload multiple songs to categorize them into albums automatically.")
     if st.button("Categorize Songs", use_container_width=True) and uploaded_files:
@@ -111,13 +126,13 @@ if current_user:
                                 st.session_state['current_song_path'] = song_path
                     with col2:
                         if st.button(f"❤️ Like", key=song, use_container_width=True):
-                            users[current_user]["liked_songs"].append(song)
+                            users[st.session_state.current_user]["liked_songs"].append(song)
                             save_users(users)
     
     # Display liked songs
-    if users[current_user]["liked_songs"]:
+    if users[st.session_state.current_user]["liked_songs"]:
         st.write("## ❤️ Liked Songs")
-        for liked_song in users[current_user]["liked_songs"]:
+        for liked_song in users[st.session_state.current_user]["liked_songs"]:
             st.write(f"🎶 {liked_song}")
 
     # Display current playing song at the bottom
