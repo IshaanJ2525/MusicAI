@@ -28,9 +28,9 @@ current_user = None
 
 def login():
     global current_user
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-    if st.button("Login"):
+    username = st.text_input("Username", placeholder="Enter your username")
+    password = st.text_input("Password", type="password", placeholder="Enter your password")
+    if st.button("Login", use_container_width=True):
         if username in users and users[username]["password"] == password:
             st.success(f"Welcome back, {username}!")
             current_user = username
@@ -38,9 +38,9 @@ def login():
             st.error("Invalid credentials")
 
 def signup():
-    username = st.text_input("New Username")
-    password = st.text_input("New Password", type="password")
-    if st.button("Sign Up"):
+    username = st.text_input("New Username", placeholder="Choose a username")
+    password = st.text_input("New Password", type="password", placeholder="Create a password")
+    if st.button("Sign Up", use_container_width=True):
         if username in users:
             st.error("Username already exists")
         else:
@@ -48,7 +48,7 @@ def signup():
             save_users(users)
             st.success("Account created! Please log in.")
 
-st.sidebar.title("User Authentication")
+st.sidebar.title("🎵 User Authentication")
 login()
 if not current_user:
     st.sidebar.subheader("Don't have an account?")
@@ -85,19 +85,20 @@ def scan_albums(sorted_path):
     return albums
 
 # Streamlit UI
-st.title("AI Music Recommendation System")
+st.title("🎶 AI Music Recommendation System")
 
 if current_user:
-    uploaded_files = st.file_uploader("Upload Songs (MP3, WAV, FLAC, MP4)", accept_multiple_files=True, type=["mp3", "wav", "flac", "mp4"])
-    if st.button("Categorize Songs") and uploaded_files:
+    st.markdown("### Upload and Categorize Songs")
+    uploaded_files = st.file_uploader("Upload Songs (MP3, WAV, FLAC, MP4)", accept_multiple_files=True, type=["mp3", "wav", "flac", "mp4"], help="Upload multiple songs to categorize them into albums automatically.")
+    if st.button("Categorize Songs", use_container_width=True) and uploaded_files:
         categorize_songs(uploaded_files, SORTED_FOLDER)
         st.success("Songs have been categorized into albums!")
     
     albums = scan_albums(SORTED_FOLDER)
     if albums:
-        st.write("### Created Albums")
+        st.write("## 🎼 Created Albums")
         for album in albums:
-            with st.expander(f"{album['Album']} ({album['Count']} Songs)"):
+            with st.expander(f"🎵 {album['Album']} ({album['Count']} Songs)"):
                 for song in album["Songs"]:
                     song_path = os.path.join(SORTED_FOLDER, album["Album"], song)
                     col1, col2 = st.columns([4, 1])
@@ -105,22 +106,23 @@ if current_user:
                         if song.endswith(".mp4"):
                             st.video(song_path)
                         else:
-                            if st.button(f"Play {song}"):
+                            if st.button(f"▶ Play {song}", use_container_width=True):
                                 st.session_state['current_song'] = song
                                 st.session_state['current_song_path'] = song_path
                     with col2:
-                        if st.button(f"❤️ Like", key=song):
+                        if st.button(f"❤️ Like", key=song, use_container_width=True):
                             users[current_user]["liked_songs"].append(song)
                             save_users(users)
     
     # Display liked songs
     if users[current_user]["liked_songs"]:
-        st.write("### ❤️ Liked Songs")
+        st.write("## ❤️ Liked Songs")
         for liked_song in users[current_user]["liked_songs"]:
             st.write(f"🎶 {liked_song}")
 
     # Display current playing song at the bottom
     if 'current_song' in st.session_state:
+        st.markdown("---")
         st.markdown(f"### 🎵 Now Playing: {st.session_state['current_song']}")
         if st.session_state['current_song'].endswith(".mp4"):
             st.video(st.session_state['current_song_path'])
