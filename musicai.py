@@ -35,14 +35,22 @@ def authenticate():
         """
         <style>
             .stApp {
-                background: linear-gradient(to right, #1E3C72, #2A5298);
+                background: #121212;
                 color: white;
+                font-family: 'Circular', sans-serif;
             }
             .stSidebar {
-                background: #1E3C72;
+                background: #000000;
+                padding: 20px;
             }
             .css-1d391kg p {
                 color: white;
+            }
+            .btn-primary {
+                background-color: #1DB954 !important;
+                border: none !important;
+                color: black !important;
+                font-weight: bold !important;
             }
         </style>
         """,
