@@ -31,6 +31,24 @@ def authenticate():
     if "logged_in" not in st.session_state:
         st.session_state.logged_in = False
 
+    st.markdown(
+        """
+        <style>
+            .stApp {
+                background: linear-gradient(to right, #1E3C72, #2A5298);
+                color: white;
+            }
+            .stSidebar {
+                background: #1E3C72;
+            }
+            .css-1d391kg p {
+                color: white;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
     if not st.session_state.logged_in:
         with st.sidebar:
             st.title("🎵 AI Music System")
@@ -63,7 +81,7 @@ authenticate()
 if not st.session_state.get("logged_in", False):
     st.markdown("""
         # 🎶 Welcome to AI Music Recommendation System
-        Explore a world of music tailored to your taste.
+        **Explore a world of music tailored to your taste.**
         Login or Sign up to start your journey!
     """)
 else:
