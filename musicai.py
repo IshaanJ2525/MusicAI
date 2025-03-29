@@ -2,7 +2,6 @@ import os
 import streamlit as st
 import pandas as pd
 import shutil
-import random
 import json
 
 # Define directories
@@ -24,10 +23,8 @@ def save_users(users):
 
 # User authentication
 users = load_users()
-current_user = None
 
 def authenticate():
-    global current_user
     if "auth_mode" not in st.session_state:
         st.session_state.auth_mode = "Login"
 
@@ -35,49 +32,48 @@ def authenticate():
         st.session_state.logged_in = False
 
     if not st.session_state.logged_in:
-        st.sidebar.title("🎵 AI Music System")
-        auth_mode = st.sidebar.radio("Select", ["Login", "Sign Up"], index=(0 if st.session_state.auth_mode == "Login" else 1))
-        st.session_state.auth_mode = auth_mode
+        with st.sidebar:
+            st.title("🎵 AI Music System")
+            auth_mode = st.radio("Select", ["Login", "Sign Up"], index=(0 if st.session_state.auth_mode == "Login" else 1))
+            st.session_state.auth_mode = auth_mode
 
-        if auth_mode == "Login":
-            username = st.sidebar.text_input("Username", placeholder="Enter your username")
-            password = st.sidebar.text_input("Password", type="password", placeholder="Enter your password")
-            if st.sidebar.button("Login", use_container_width=True):
-                if username in users and users[username]["password"] == password:
-                    st.sidebar.success(f"Welcome back, {username}!")
-                    st.session_state.logged_in = True
-                    st.session_state.current_user = username
-                else:
-                    st.sidebar.error("Invalid credentials")
-        else:
-            username = st.sidebar.text_input("New Username", placeholder="Choose a username")
-            password = st.sidebar.text_input("New Password", type="password", placeholder="Create a password")
-            if st.sidebar.button("Sign Up", use_container_width=True):
-                if username in users:
-                    st.sidebar.error("Username already exists")
-                else:
-                    users[username] = {"password": password, "liked_songs": []}
-                    save_users(users)
-                    st.sidebar.success("Account created! Please log in.")
-    
+            if auth_mode == "Login":
+                username = st.text_input("Username", placeholder="Enter your username")
+                password = st.text_input("Password", type="password", placeholder="Enter your password")
+                if st.button("Login", use_container_width=True):
+                    if username in users and users[username]["password"] == password:
+                        st.session_state.logged_in = True
+                        st.session_state.current_user = username
+                        st.experimental_rerun()
+                    else:
+                        st.error("Invalid credentials")
+            else:
+                username = st.text_input("New Username", placeholder="Choose a username")
+                password = st.text_input("New Password", type="password", placeholder="Create a password")
+                if st.button("Sign Up", use_container_width=True):
+                    if username in users:
+                        st.error("Username already exists")
+                    else:
+                        users[username] = {"password": password, "liked_songs": []}
+                        save_users(users)
+                        st.success("Account created! Please log in.")
+
 authenticate()
 
-# UI for welcome screen
 if not st.session_state.get("logged_in", False):
     st.markdown("""
         # 🎶 Welcome to AI Music Recommendation System
-        Explore a world of music tailored to your taste. 
+        Explore a world of music tailored to your taste.
         Login or Sign up to start your journey!
     """)
 else:
     st.title("🎶 AI Music Recommendation System")
     st.markdown(f"## Welcome, {st.session_state.current_user}")
 
-    # Function to categorize songs
     def categorize_songs(uploaded_files, sorted_path):
         for uploaded_file in uploaded_files:
             song_name = uploaded_file.name
-            if song_name.endswith((".mp3", ".wav", ".flac", ".mp4")):
+            if song_name.endswith((".mp3", ".wav", ".flac")):
                 song_path = os.path.join(sorted_path, song_name)
                 with open(song_path, "wb") as f:
                     f.write(uploaded_file.getbuffer())
@@ -90,7 +86,6 @@ else:
                     os.makedirs(album_path, exist_ok=True)
                     shutil.move(song_path, os.path.join(album_path, song_name))
 
-    # Function to scan albums
     def scan_albums(sorted_path):
         albums = []
         for album in os.listdir(sorted_path):
@@ -104,7 +99,7 @@ else:
         return albums
 
     st.markdown("### Upload and Categorize Songs")
-    uploaded_files = st.file_uploader("Upload Songs (MP3, WAV, FLAC, MP4)", accept_multiple_files=True, type=["mp3", "wav", "flac", "mp4"], help="Upload multiple songs to categorize them into albums automatically.")
+    uploaded_files = st.file_uploader("Upload Songs (MP3, WAV, FLAC)", accept_multiple_files=True, type=["mp3", "wav", "flac"], help="Upload multiple songs to categorize them into albums automatically.")
     if st.button("Categorize Songs", use_container_width=True) and uploaded_files:
         categorize_songs(uploaded_files, SORTED_FOLDER)
         st.success("Songs have been categorized into albums!")
@@ -118,28 +113,20 @@ else:
                     song_path = os.path.join(SORTED_FOLDER, album["Album"], song)
                     col1, col2 = st.columns([4, 1])
                     with col1:
-                        if song.endswith(".mp4"):
-                            st.video(song_path)
-                        else:
-                            if st.button(f"▶ Play {song}", use_container_width=True):
-                                st.session_state['current_song'] = song
-                                st.session_state['current_song_path'] = song_path
+                        if st.button(f"▶ Play {song}", use_container_width=True):
+                            st.session_state['current_song'] = song
+                            st.session_state['current_song_path'] = song_path
                     with col2:
                         if st.button(f"❤️ Like", key=song, use_container_width=True):
                             users[st.session_state.current_user]["liked_songs"].append(song)
                             save_users(users)
     
-    # Display liked songs
     if users[st.session_state.current_user]["liked_songs"]:
         st.write("## ❤️ Liked Songs")
         for liked_song in users[st.session_state.current_user]["liked_songs"]:
             st.write(f"🎶 {liked_song}")
-
-    # Display current playing song at the bottom
+    
     if 'current_song' in st.session_state:
         st.markdown("---")
         st.markdown(f"### 🎵 Now Playing: {st.session_state['current_song']}")
-        if st.session_state['current_song'].endswith(".mp4"):
-            st.video(st.session_state['current_song_path'])
-        else:
-            st.audio(st.session_state['current_song_path'])
+        st.audio(st.session_state['current_song_path'])
